@@ -17,16 +17,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package settings
 
 type Config struct {
-	ListenPort int    `mapstructure:"port"`
-	AuthMode   bool   `mapstructure:"auth"`
-	HookAction string `mapstructure:"action"`
-	DebugMode  bool   `mapstructure:"debug"`
+	ListenAddress string `mapstructure:"address"`
+	ListenPort    int    `mapstructure:"port"`
+	AuthMode      bool   `mapstructure:"auth"`
+	Token         string `mapstructure:"token"`
+	DebugMode     bool   `mapstructure:"debug"`
 }
 
 func SetDefault() Config {
 	return Config{
-		ListenPort: 8080,
-		AuthMode:   false,
-		DebugMode:  false,
+		ListenAddress: "127.0.0.1",
+		ListenPort:    8080,
+		AuthMode:      false,
+		Token:         "",
+		DebugMode:     false,
 	}
 }

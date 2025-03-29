@@ -29,9 +29,10 @@ import (
 
 var (
 	configFile string
+	netAddr    string
 	port       int
 	authMode   bool
-	hookAction string
+	token      string
 	debugMode  bool
 
 	config settings.Config
@@ -57,19 +58,24 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "configuration file to use")
+	serverCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "configuration file to use")
+	serverCmd.PersistentFlags().StringVarP(&netAddr, "address", "a", settings.SetDefault().ListenAddress, "network address (e.g. 0.0.0.0)")
 	serverCmd.PersistentFlags().IntVarP(&port, "port", "p", settings.SetDefault().ListenPort, "port to listen on")
 	serverCmd.PersistentFlags().BoolVar(&authMode, "auth", settings.SetDefault().AuthMode, "enable verbose output for debugging")
-	serverCmd.PersistentFlags().StringVarP(&hookAction, "action", "a", "", "what command to run on hit")
+	serverCmd.PersistentFlags().StringVarP(&token, "token", "t", "", "API token (implies --auth)")
 	serverCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", settings.SetDefault().DebugMode, "enable verbose output for debugging")
+	// serverCmd.MarkFlagsRequiredTogether("auth", "token")
 
+	viper.BindPFlag("address", serverCmd.PersistentFlags().Lookup("address"))
 	viper.BindPFlag("port", serverCmd.PersistentFlags().Lookup("port"))
 	viper.BindPFlag("debug", serverCmd.PersistentFlags().Lookup("debug"))
 	viper.BindPFlag("auth", serverCmd.PersistentFlags().Lookup("auth"))
-	viper.BindPFlag("action", serverCmd.PersistentFlags().Lookup("action"))
+	viper.BindPFlag("token", serverCmd.PersistentFlags().Lookup("token"))
 
 	rootCmd.AddCommand(serverCmd)
+	rootCmd.AddCommand(tokenCmd)
 	rootCmd.AddCommand(versionCmd)
+
 }
 
 func initConfig() {
@@ -100,5 +106,10 @@ func initConfig() {
 	if err := viper.Unmarshal(&config); err != nil {
 		fmt.Fprintln(os.Stderr, "Unable to read values into configuration!")
 		os.Exit(1)
+	}
+
+	if authMode && config.Token == "" {
+		fmt.Printf("Token missing for auth mode")
+		os.Exit(2)
 	}
 }

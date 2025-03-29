@@ -20,30 +20,52 @@ import (
 	"arrakis/settings"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	_ "net/http"
+	"net/http"
 )
 
-func SetupRouter(c *settings.Config) error {
+func SetupRouter(config *settings.Config) error {
 	router := gin.Default()
+	netAddr := config.ListenAddress + ":" + strconv.Itoa(config.ListenPort)
 
-	router.POST("/g10k", testWebhook())
+	router.POST("/g10k", authWebhook(&config.Token))
 
-	if err := startRouter(router, c.ListenPort); err != nil {
+	if err := startRouter(router, netAddr); err != nil {
 		return fmt.Errorf("Could not start router %s", err)
 	}
 
 	return nil
 }
 
-func startRouter(r *gin.Engine, port int) error {
-	return r.Run(":" + strconv.Itoa(port))
+func startRouter(r *gin.Engine, a string) error {
+	return r.Run(a)
 }
 
-func testWebhook() gin.HandlerFunc {
+func authWebhook(t *string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		fmt.Println("Hurray the webhook works!")
+		authHeader := c.GetHeader("Authorization")
+
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is missing"})
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		authToken := strings.Split(authHeader, " ")
+		if len(authToken) != 2 || authToken[0] != "Bearer" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token format"})
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		tokenString := authToken[1]
+		if tokenString != *(t) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 	}
 }
