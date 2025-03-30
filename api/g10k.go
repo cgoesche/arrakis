@@ -14,33 +14,21 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package cmd
+package api
 
 import (
-	"arrakis/api"
 	"fmt"
-
-	"github.com/spf13/cobra"
+	"github.com/gin-gonic/gin"
+	"net/http"
+	"os/exec"
 )
 
-var serverCmd = &cobra.Command{
-	Use:     "server",
-	Aliases: []string{"serve", "api", "listen"},
-	Args:    cobra.MatchAll(cobra.RangeArgs(0, 3), cobra.OnlyValidArgs),
-	Short:   "Start the API server",
-	Long:    "Start the API server",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := serverStart(); err != nil {
-			return fmt.Errorf("Error: %s", err)
-		}
-		return nil
-	},
-}
+func runG10K(c *gin.Context) {
+	fmt.Printf("Authorized call :)")
+	cmd := exec.Command("/usr/bin/touch", "/home/cgoesche/arrakis.txt")
+	cmd.Run()
 
-func serverStart() error {
-	if err := api.SetupRouter(config); err != nil {
-		return err
-	}
-
-	return nil
+	c.JSON(http.StatusOK, gin.H{
+		"success": "Authorized :D",
+		"target":  "g10k"})
 }

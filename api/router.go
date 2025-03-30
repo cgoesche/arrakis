@@ -26,11 +26,11 @@ import (
 	"net/http"
 )
 
-func SetupRouter(config *settings.Config) error {
+func SetupRouter(config settings.Config) error {
 	router := gin.Default()
-	netAddr := config.ListenAddress + ":" + strconv.Itoa(config.ListenPort)
+	netAddr := config.Network.ListenAddress + ":" + strconv.Itoa(config.Network.ListenPort)
 
-	router.POST("/g10k", authWebhook(&config.Token))
+	router.POST("/g10k", authMiddleware(config.API.AuthMode, config.API.Token))
 
 	if err := startRouter(router, netAddr); err != nil {
 		return fmt.Errorf("Could not start router %s", err)
@@ -43,8 +43,13 @@ func startRouter(r *gin.Engine, a string) error {
 	return r.Run(a)
 }
 
-func authWebhook(t *string) gin.HandlerFunc {
+func authMiddleware(m bool, t string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// authMode is false bypasses token check
+		if m == false {
+			runG10K(c)
+			return
+		}
 
 		authHeader := c.GetHeader("Authorization")
 
@@ -62,10 +67,13 @@ func authWebhook(t *string) gin.HandlerFunc {
 		}
 
 		tokenString := authToken[1]
-		if tokenString != *(t) {
+
+		if tokenString != t {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
+
+		runG10K(c)
 	}
 }

@@ -1,4 +1,5 @@
 .DEFAULT_GOAL := build
+INSTALL_DIR   ::= /usr/local/bin
 
 .PHONY:fmt vet build
 fmt: 
@@ -9,6 +10,9 @@ vet: fmt
 
 build: vet
 	go build -o ./build/arrakis
+
+install: build
+	sudo cp ./build/arrakis $(INSTALL_DIR)/
 
 clean: 
 	go clean

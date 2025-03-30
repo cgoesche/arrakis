@@ -16,20 +16,42 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package settings
 
-type Config struct {
+type Network struct {
 	ListenAddress string `mapstructure:"address"`
 	ListenPort    int    `mapstructure:"port"`
-	AuthMode      bool   `mapstructure:"auth"`
-	Token         string `mapstructure:"token"`
-	DebugMode     bool   `mapstructure:"debug"`
+	EnableTLS     bool   `mapstructure:"enableTLS"`
+}
+
+type API struct {
+	AuthMode           bool   `mapstructure:"authMode"`
+	Token              string `mapstructure:"token"`
+	TokenHashAlgorithm string `mapstructure:"tokenHashAlgorithm"`
+}
+
+type Logging struct {
+	DebugMode bool `mapstructure:"debug"`
+}
+
+type Config struct {
+	Network Network `mapstructure:"network"`
+	API     API     `mapstructure:"api"`
+	Logging Logging `mapstructure:"logging"`
 }
 
 func SetDefault() Config {
 	return Config{
-		ListenAddress: "127.0.0.1",
-		ListenPort:    8080,
-		AuthMode:      false,
-		Token:         "",
-		DebugMode:     false,
+		Network: Network{
+			ListenAddress: "127.0.0.1",
+			ListenPort:    8080,
+			EnableTLS:     false,
+		},
+		API: API{
+			AuthMode:           false,
+			Token:              "",
+			TokenHashAlgorithm: "sha256",
+		},
+		Logging: Logging{
+			DebugMode: false,
+		},
 	}
 }

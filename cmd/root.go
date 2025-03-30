@@ -22,18 +22,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
-	configFile string
-	netAddr    string
-	port       int
-	authMode   bool
-	token      string
-	debugMode  bool
+	configFile          string
+	netAddr             string
+	port                int
+	enableTLS           bool
+	authMode            bool
+	token               string
+	tokenHashAlgo       string
+	printHashAlgorithms bool
+	debugMode           bool
 
 	config settings.Config
 
@@ -44,6 +48,9 @@ var (
 it is also a lightweight webhook API server that aims to handle webhooks triggered by 
 arbitrary Git repository events and, depending on the payload, perform user-defined actions.`,
 		Version: app.Version,
+		CompletionOptions: cobra.CompletionOptions{
+			HiddenDefaultCmd: true,
+		},
 	}
 )
 
@@ -58,19 +65,22 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	rootCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", settings.SetDefault().Logging.DebugMode, "enable verbose output for debugging")
 	serverCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "configuration file to use")
-	serverCmd.PersistentFlags().StringVarP(&netAddr, "address", "a", settings.SetDefault().ListenAddress, "network address (e.g. 0.0.0.0)")
-	serverCmd.PersistentFlags().IntVarP(&port, "port", "p", settings.SetDefault().ListenPort, "port to listen on")
-	serverCmd.PersistentFlags().BoolVar(&authMode, "auth", settings.SetDefault().AuthMode, "enable verbose output for debugging")
-	serverCmd.PersistentFlags().StringVarP(&token, "token", "t", "", "API token (implies --auth)")
-	serverCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", settings.SetDefault().DebugMode, "enable verbose output for debugging")
-	// serverCmd.MarkFlagsRequiredTogether("auth", "token")
+	serverCmd.PersistentFlags().StringVarP(&netAddr, "address", "a", settings.SetDefault().Network.ListenAddress, "network address (e.g. 0.0.0.0)")
+	serverCmd.PersistentFlags().IntVarP(&port, "port", "p", settings.SetDefault().Network.ListenPort, "port to listen on")
+	serverCmd.PersistentFlags().BoolVarP(&enableTLS, "tls", "s", settings.SetDefault().Network.EnableTLS, "enable TLS")
+	serverCmd.PersistentFlags().BoolVar(&authMode, "auth", settings.SetDefault().API.AuthMode, "enable verbose output for debugging")
+	serverCmd.PersistentFlags().StringVarP(&token, "token", "t", settings.SetDefault().API.Token, "API token (implies --auth)")
+	tokenCmd.PersistentFlags().StringVarP(&tokenHashAlgo, "algorithm", "a", settings.SetDefault().API.TokenHashAlgorithm, "specify the token hashing algorithm")
 
-	viper.BindPFlag("address", serverCmd.PersistentFlags().Lookup("address"))
-	viper.BindPFlag("port", serverCmd.PersistentFlags().Lookup("port"))
-	viper.BindPFlag("debug", serverCmd.PersistentFlags().Lookup("debug"))
-	viper.BindPFlag("auth", serverCmd.PersistentFlags().Lookup("auth"))
-	viper.BindPFlag("token", serverCmd.PersistentFlags().Lookup("token"))
+	viper.BindPFlag("logging.debug", rootCmd.PersistentFlags().Lookup("debug"))
+	viper.BindPFlag("network.address", serverCmd.PersistentFlags().Lookup("address"))
+	viper.BindPFlag("network.port", serverCmd.PersistentFlags().Lookup("port"))
+	viper.BindPFlag("network.enableTLS", serverCmd.PersistentFlags().Lookup("tls"))
+	viper.BindPFlag("api.authMode", serverCmd.PersistentFlags().Lookup("auth"))
+	viper.BindPFlag("api.token", serverCmd.PersistentFlags().Lookup("token"))
+	viper.BindPFlag("api.tokenHashAlgorithm", tokenCmd.PersistentFlags().Lookup("algorithm"))
 
 	rootCmd.AddCommand(serverCmd)
 	rootCmd.AddCommand(tokenCmd)
@@ -89,7 +99,7 @@ func initConfig() {
 		}
 
 		var configPath string
-		configPath = filepath.Join(configDir, "arrakis")
+		configPath = filepath.Join(configDir, app.Name)
 
 		viper.AddConfigPath(configPath)
 		viper.SetConfigType("yaml")
@@ -98,6 +108,9 @@ func initConfig() {
 
 	viper.SetEnvPrefix(app.Name)
 	viper.AutomaticEnv()
+	// Needed so that the viper engine can map the right suboptions
+	// from the YAML configuration to the env
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
@@ -108,8 +121,11 @@ func initConfig() {
 		os.Exit(1)
 	}
 
-	if authMode && config.Token == "" {
-		fmt.Printf("Token missing for auth mode")
+	if authMode && config.API.Token == "" {
+		fmt.Printf("API token missing for auth mode. Please ")
+		os.Exit(2)
+	} else if !authMode && config.API.Token != "" {
+		fmt.Printf("You have to enable authMode when using an API token")
 		os.Exit(2)
 	}
 }
