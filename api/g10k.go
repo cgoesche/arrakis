@@ -25,10 +25,10 @@ import (
 
 func runG10K(c *gin.Context) {
 	fmt.Printf("Authorized call :)")
-	cmd := exec.Command("/usr/bin/touch", "/home/cgoesche/arrakis.txt")
+	cmd := exec.Command("/usr/bin/g10k", "-config", "/etc/puppetlabs/g10k/g10k.yaml")
 	cmd.Run()
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": "Authorized :D",
-		"target":  "g10k"})
+		"command": "g10k -config /etc/puppetlabs/g10k/g10k.yaml"})
 }
