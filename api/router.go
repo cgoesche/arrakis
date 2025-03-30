@@ -45,7 +45,7 @@ func startRouter(r *gin.Engine, a string) error {
 
 func authMiddleware(m bool, t string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// authMode is false bypasses token check
+		// authMode == false bypasses token validation check
 		if m == false {
 			runG10K(c)
 			return

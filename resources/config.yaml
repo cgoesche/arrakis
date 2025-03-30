@@ -1,0 +1,11 @@
+---
+  network:
+    address: "localhost"
+    port: 8080
+    enableTLS: false
+  api:
+    authMode: false
+    token: ""
+    tokenHashAlgorithm: "sha256"
+  logging:
+    debug: true

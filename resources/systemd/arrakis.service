@@ -1,0 +1,12 @@
+[Service]
+Description=Arrakis - Lightweight Puppet G10K API server
+After=network.target 
+
+
+[Unit]
+Type=simple
+ExecStart=/usr/local/bin/arrakis server --config /etc/arrakis/config.yaml
+
+
+[Install]
+WantedBy=multiuser.target
