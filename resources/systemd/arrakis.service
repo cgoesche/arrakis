@@ -1,12 +1,10 @@
-[Service]
-Description=Arrakis - Lightweight Puppet G10K webhook server
-After=network.target 
-
 [Unit]
+Description=Arrakis - Lightweight Puppet G10K webhook server
+After=network.target
+[Service]
 Type=simple
-ExecStart=/usr/local/bin/arrakis server --config /etc/arrakis/config.yaml
+ExecStart=/usr/local/bin/arrakis server --config /etc/arrakis/config.yaml --auth
 Restart=always
 RestartSec=5s
-
 [Install]
-WantedBy=multiuser.target
+WantedBy=multi-user.target
