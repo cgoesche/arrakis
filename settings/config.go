@@ -17,9 +17,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package settings
 
 type Network struct {
-	ListenAddress string `mapstructure:"address"`
-	ListenPort    int    `mapstructure:"port"`
-	EnableTLS     bool   `mapstructure:"enableTLS"`
+	ListenAddress   string `mapstructure:"address"`
+	ListenPort      int    `mapstructure:"port"`
+	ResponseTimeout int    `mapstructure:"responseTimeout"`
+	EnableTLS       bool   `mapstructure:"enableTLS"`
+	TLSCertFile     string `mapstructure:"tlsCert"`
+	TLSKeyFile      string `mapstructure:"tlsKey"`
 }
 
 type API struct {
@@ -41,9 +44,12 @@ type Config struct {
 func SetDefault() Config {
 	return Config{
 		Network: Network{
-			ListenAddress: "127.0.0.1",
-			ListenPort:    8080,
-			EnableTLS:     false,
+			ListenAddress:   "127.0.0.1",
+			ListenPort:      8080,
+			ResponseTimeout: 60,
+			EnableTLS:       false,
+			TLSCertFile:     "",
+			TLSKeyFile:      "",
 		},
 		API: API{
 			AuthMode:           false,

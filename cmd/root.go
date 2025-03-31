@@ -32,7 +32,10 @@ var (
 	configFile          string
 	netAddr             string
 	port                int
+	responseTimeout     int
 	enableTLS           bool
+	tlsKeyFile          string
+	tlsCertFile         string
 	authMode            bool
 	token               string
 	tokenHashAlgo       string
@@ -69,7 +72,10 @@ func init() {
 	serverCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "configuration file to use")
 	serverCmd.PersistentFlags().StringVarP(&netAddr, "address", "a", settings.SetDefault().Network.ListenAddress, "network address (e.g. 0.0.0.0)")
 	serverCmd.PersistentFlags().IntVarP(&port, "port", "p", settings.SetDefault().Network.ListenPort, "port to listen on")
+	serverCmd.PersistentFlags().IntVar(&responseTimeout, "timeout", settings.SetDefault().Network.ResponseTimeout, "API request response timeout (sec)")
 	serverCmd.PersistentFlags().BoolVarP(&enableTLS, "tls", "s", settings.SetDefault().Network.EnableTLS, "enable TLS")
+	serverCmd.PersistentFlags().StringVar(&tlsCertFile, "cert", settings.SetDefault().Network.TLSCertFile, "TLS cert file path")
+	serverCmd.PersistentFlags().StringVar(&tlsKeyFile, "key", settings.SetDefault().Network.TLSKeyFile, "TLS key file path")
 	serverCmd.PersistentFlags().BoolVar(&authMode, "auth", settings.SetDefault().API.AuthMode, "enable verbose output for debugging")
 	serverCmd.PersistentFlags().StringVarP(&token, "token", "t", settings.SetDefault().API.Token, "API token (implies --auth)")
 	tokenCmd.PersistentFlags().StringVarP(&tokenHashAlgo, "algorithm", "a", settings.SetDefault().API.TokenHashAlgorithm, "specify the token hashing algorithm")
@@ -77,7 +83,10 @@ func init() {
 	viper.BindPFlag("logging.debug", rootCmd.PersistentFlags().Lookup("debug"))
 	viper.BindPFlag("network.address", serverCmd.PersistentFlags().Lookup("address"))
 	viper.BindPFlag("network.port", serverCmd.PersistentFlags().Lookup("port"))
+	viper.BindPFlag("network.responseTimeout", serverCmd.PersistentFlags().Lookup("timeout"))
 	viper.BindPFlag("network.enableTLS", serverCmd.PersistentFlags().Lookup("tls"))
+	viper.BindPFlag("network.tlsCert", serverCmd.PersistentFlags().Lookup("key"))
+	viper.BindPFlag("network.tlsKey", serverCmd.PersistentFlags().Lookup("cert"))
 	viper.BindPFlag("api.authMode", serverCmd.PersistentFlags().Lookup("auth"))
 	viper.BindPFlag("api.token", serverCmd.PersistentFlags().Lookup("token"))
 	viper.BindPFlag("api.tokenHashAlgorithm", tokenCmd.PersistentFlags().Lookup("algorithm"))

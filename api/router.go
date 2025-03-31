@@ -21,34 +21,52 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
-func SetupRouter(config settings.Config) error {
+func Start(config settings.Config) error {
 	router := gin.Default()
 	netAddr := config.Network.ListenAddress + ":" + strconv.Itoa(config.Network.ListenPort)
 
-	router.POST("/g10k", authMiddleware(config.API.AuthMode, config.API.Token))
+	s := &http.Server{
+		Addr:           netAddr,
+		Handler:        router,
+		ReadTimeout:    2 * time.Second,                                             // this works because constants have an adaptive type
+		WriteTimeout:   time.Duration(config.Network.ResponseTimeout) * time.Second, // here we have to do a type conversion
+		MaxHeaderBytes: 1 << 20,
+	}
 
-	if err := startRouter(router, netAddr); err != nil {
+	router.POST("/g10k", authMiddleware(runG10K, config.API.AuthMode, config.API.Token))
+
+	if err := serve(s, config); err != nil {
 		return fmt.Errorf("Could not start router %s", err)
 	}
 
 	return nil
 }
 
-func startRouter(r *gin.Engine, a string) error {
-	return r.Run(a)
+func serve(s *http.Server, c settings.Config) error {
+	e := c.Network.EnableTLS
+	crt := c.Network.TLSCertFile
+	k := c.Network.TLSKeyFile
+
+	if !e {
+		fmt.Printf("Serving the API via HTTP on %s\n", s.Addr)
+		return s.ListenAndServe()
+	} else {
+		fmt.Printf("Serveing the API via HTTPS on %s\n", s.Addr)
+		return s.ListenAndServeTLS(crt, k)
+	}
 }
 
-func authMiddleware(m bool, t string) gin.HandlerFunc {
+func authMiddleware(fn gin.HandlerFunc, m bool, t string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// authMode == false bypasses token validation check
 		if m == false {
-			runG10K(c)
-			return
+			fn(c)
 		}
 
 		authHeader := c.GetHeader("Authorization")
@@ -74,6 +92,6 @@ func authMiddleware(m bool, t string) gin.HandlerFunc {
 			return
 		}
 
-		runG10K(c)
+		fn(c)
 	}
 }

@@ -38,7 +38,7 @@ var serverCmd = &cobra.Command{
 }
 
 func serverStart() error {
-	if err := api.SetupRouter(config); err != nil {
+	if err := api.Start(config); err != nil {
 		return err
 	}
 

@@ -19,16 +19,53 @@ package api
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"io"
 	"net/http"
 	"os/exec"
 )
 
 func runG10K(c *gin.Context) {
-	fmt.Printf("Authorized call :)")
-	cmd := exec.Command("/usr/bin/g10k", "-config", "/etc/puppetlabs/g10k/g10k.yaml")
-	cmd.Run()
+	cmd := exec.Command("/usr/local/bin/g10k -config /etc/puppetlabs/g10k/g10k.yaml'")
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": "Failed",
+			"error":  err})
+		return
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": "Failed",
+			"error":  err})
+		return
+	}
+
+	if err = cmd.Start(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": "Failed",
+			"error":  err})
+		return
+	}
+
+	fmt.Printf("Started g10k ...\n")
+	stdOut, _ := io.ReadAll(stdout)
+	stdErr, _ := io.ReadAll(stderr)
+
+	if err = cmd.Wait(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": "Failed",
+			"error":  err})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"success": "Authorized :D",
-		"command": "g10k -config /etc/puppetlabs/g10k/g10k.yaml"})
+		"status": "Success",
+		"stdout": string(stdOut),
+		"stderr": string(stdErr),
+		"error":  "",
+	})
+	return
 }
