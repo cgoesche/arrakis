@@ -25,7 +25,7 @@ import (
 )
 
 func runG10K(c *gin.Context) {
-	cmd := exec.Command("/usr/local/bin/g10k -config /etc/puppetlabs/g10k/g10k.yaml'")
+	cmd := exec.Command("/usr/bin/g10k -config /etc/puppetlabs/g10k/g10k.yaml")
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
