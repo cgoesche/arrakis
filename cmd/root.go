@@ -125,7 +125,6 @@ func initConfig() {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	} else {
 		fmt.Printf("Unable to read config file: %s\nError: %s\n", viper.ConfigFileUsed(), err)
-		os.Exit(2)
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {
