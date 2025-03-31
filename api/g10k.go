@@ -45,7 +45,7 @@ func runG10K(c *gin.Context) {
 
 	if err = cmd.Start(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"status": "Failed to attach to start program",
+			"status": "Failed to start program",
 			"error":  err})
 		return
 	}
@@ -56,7 +56,7 @@ func runG10K(c *gin.Context) {
 
 	if err = cmd.Wait(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"status": "The program exit with a non-zero code",
+			"status": "The program exited with a non-zero code",
 			"error":  err})
 		return
 	}
