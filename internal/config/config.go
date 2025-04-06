@@ -14,7 +14,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package settings
+package config
+
+import "arrakis/internal/logging"
 
 type Network struct {
 	ListenAddress   string `mapstructure:"address"`
@@ -32,6 +34,7 @@ type API struct {
 }
 
 type Logging struct {
+	Logger    *logging.Logger
 	DebugMode bool `mapstructure:"debug"`
 }
 
@@ -57,6 +60,7 @@ func SetDefault() Config {
 			TokenHashAlgorithm: "sha256",
 		},
 		Logging: Logging{
+			Logger:    nil,
 			DebugMode: false,
 		},
 	}

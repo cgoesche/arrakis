@@ -18,7 +18,8 @@ package cmd
 
 import (
 	"arrakis/api"
-	"fmt"
+	"arrakis/internal/status"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -26,21 +27,20 @@ import (
 var serverCmd = &cobra.Command{
 	Use:     "server",
 	Aliases: []string{"serve", "api", "listen"},
-	Args:    cobra.MatchAll(cobra.RangeArgs(0, 3), cobra.OnlyValidArgs),
+	Args:    cobra.MatchAll(cobra.OnlyValidArgs),
 	Short:   "Start the API server",
 	Long:    "Start the API server",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := serverStart(); err != nil {
-			return fmt.Errorf("Error: %s", err)
-		}
-		return nil
+	Run: func(cmd *cobra.Command, args []string) {
+		serverStart()
 	},
 }
 
-func serverStart() error {
-	if err := api.Start(config); err != nil {
-		return err
-	}
+func serverStart() {
+	conf.Logging.Logger.Debug("Starting the API server")
 
-	return nil
+	if err := api.Start(conf); err != nil {
+		err = status.New(status.ErrAPIStart, "unable to start API", err)
+		conf.Logging.Logger.Error(err)
+		os.Exit(1)
+	}
 }

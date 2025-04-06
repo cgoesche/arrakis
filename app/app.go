@@ -17,8 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package app
 
 const (
-	Name    = "arrakis"
-	Version = "0.1.0"
-	Author  = "Christian Goeschel Ndjomouo"
-	License = "GPLv3"
+	Name        = "arrakis"
+	Description = "A lightweight Puppet g10k API server"
+	Version     = "0.2.0"
+	Author      = "Christian Goeschel Ndjomouo"
+	License     = "GPLv3"
 )

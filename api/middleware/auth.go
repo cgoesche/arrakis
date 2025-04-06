@@ -14,59 +14,21 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package api
+package middleware
 
 import (
-	"arrakis/settings"
-	"fmt"
-	"strconv"
+	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
-func Start(config settings.Config) error {
-	router := gin.Default()
-	netAddr := config.Network.ListenAddress + ":" + strconv.Itoa(config.Network.ListenPort)
-
-	s := &http.Server{
-		Addr:           netAddr,
-		Handler:        router,
-		ReadTimeout:    2 * time.Second,                                             // this works because constants have an adaptive type
-		WriteTimeout:   time.Duration(config.Network.ResponseTimeout) * time.Second, // here we have to do a type conversion
-		MaxHeaderBytes: 1 << 20,
-	}
-
-	router.POST("/g10k", authMiddleware(runG10K, config.API.AuthMode, config.API.Token))
-
-	if err := serve(s, config); err != nil {
-		return fmt.Errorf("Could not start router %s", err)
-	}
-
-	return nil
-}
-
-func serve(s *http.Server, c settings.Config) error {
-	e := c.Network.EnableTLS
-	crt := c.Network.TLSCertFile
-	k := c.Network.TLSKeyFile
-
-	if !e {
-		fmt.Printf("Serving the API via HTTP on %s\n", s.Addr)
-		return s.ListenAndServe()
-	} else {
-		fmt.Printf("Serveing the API via HTTPS on %s\n", s.Addr)
-		return s.ListenAndServeTLS(crt, k)
-	}
-}
-
-func authMiddleware(fn gin.HandlerFunc, m bool, t string) gin.HandlerFunc {
+func AuthCall(m bool, t string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// authMode == false bypasses token validation check
-		if m == false {
-			fn(c)
+		if !m {
+			c.Next()
+			return
 		}
 
 		authHeader := c.GetHeader("Authorization")
@@ -92,6 +54,6 @@ func authMiddleware(fn gin.HandlerFunc, m bool, t string) gin.HandlerFunc {
 			return
 		}
 
-		fn(c)
+		c.Next()
 	}
 }

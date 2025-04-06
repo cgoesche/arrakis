@@ -18,7 +18,10 @@ package cmd
 
 import (
 	"arrakis/app"
-	"arrakis/settings"
+	"arrakis/internal/config"
+	"arrakis/internal/logging"
+	"arrakis/internal/status"
+
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,27 +32,25 @@ import (
 )
 
 var (
-	configFile          string
-	netAddr             string
-	port                int
-	responseTimeout     int
-	enableTLS           bool
-	tlsKeyFile          string
-	tlsCertFile         string
-	authMode            bool
-	token               string
-	tokenHashAlgo       string
-	printHashAlgorithms bool
-	debugMode           bool
+	configFile      string
+	netAddr         string
+	port            int
+	responseTimeout int
+	enableTLS       bool
+	tlsKeyFile      string
+	tlsCertFile     string
+	authMode        bool
+	token           string
+	tokenHashAlgo   string
+	debugMode       bool
 
-	config settings.Config
+	conf config.Config
 
 	rootCmd = &cobra.Command{
 		Use:   "arrakis",
-		Short: "A lightweight git repository webhook API server",
-		Long: `Although Arrakis is first and foremost the Desert Planet in the Dune universe, 
-it is also a lightweight webhook API server that aims to handle webhooks triggered by 
-arbitrary Git repository events and, depending on the payload, perform user-defined actions.`,
+		Short: "A lightweight Puppet g10k API server",
+		Long: `Although Arrakis is first and foremost home to the Fremen, it is also a lightweight API server
+that aims to handle Puppet control repo webhooks for g10k. It supports token-based authentication and HTTPS.`,
 		Version: app.Version,
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
@@ -60,27 +61,27 @@ arbitrary Git repository events and, depending on the payload, perform user-defi
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
 func init() {
+
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", settings.SetDefault().Logging.DebugMode, "enable verbose output for debugging")
+	serverCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", config.SetDefault().Logging.DebugMode, "enable verbose output for debugging")
 	serverCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "configuration file to use")
-	serverCmd.PersistentFlags().StringVarP(&netAddr, "address", "a", settings.SetDefault().Network.ListenAddress, "network address (e.g. 0.0.0.0)")
-	serverCmd.PersistentFlags().IntVarP(&port, "port", "p", settings.SetDefault().Network.ListenPort, "port to listen on")
-	serverCmd.PersistentFlags().IntVar(&responseTimeout, "timeout", settings.SetDefault().Network.ResponseTimeout, "API request response timeout (sec)")
-	serverCmd.PersistentFlags().BoolVarP(&enableTLS, "tls", "s", settings.SetDefault().Network.EnableTLS, "enable TLS")
-	serverCmd.PersistentFlags().StringVar(&tlsCertFile, "cert", settings.SetDefault().Network.TLSCertFile, "TLS cert file path")
-	serverCmd.PersistentFlags().StringVar(&tlsKeyFile, "key", settings.SetDefault().Network.TLSKeyFile, "TLS key file path")
-	serverCmd.PersistentFlags().BoolVar(&authMode, "auth", settings.SetDefault().API.AuthMode, "enable verbose output for debugging")
-	serverCmd.PersistentFlags().StringVarP(&token, "token", "t", settings.SetDefault().API.Token, "API token (implies --auth)")
-	tokenCmd.PersistentFlags().StringVarP(&tokenHashAlgo, "algorithm", "a", settings.SetDefault().API.TokenHashAlgorithm, "specify the token hashing algorithm")
+	serverCmd.PersistentFlags().StringVarP(&netAddr, "address", "a", config.SetDefault().Network.ListenAddress, "network address (e.g. 0.0.0.0)")
+	serverCmd.PersistentFlags().IntVarP(&port, "port", "p", config.SetDefault().Network.ListenPort, "port to listen on")
+	serverCmd.PersistentFlags().IntVar(&responseTimeout, "timeout", config.SetDefault().Network.ResponseTimeout, "API request response timeout (sec)")
+	serverCmd.PersistentFlags().BoolVarP(&enableTLS, "tls", "s", config.SetDefault().Network.EnableTLS, "enable TLS")
+	serverCmd.PersistentFlags().StringVar(&tlsCertFile, "cert", config.SetDefault().Network.TLSCertFile, "TLS cert file path")
+	serverCmd.PersistentFlags().StringVar(&tlsKeyFile, "key", config.SetDefault().Network.TLSKeyFile, "TLS key file path")
+	serverCmd.PersistentFlags().BoolVar(&authMode, "auth", config.SetDefault().API.AuthMode, "require an API token for protected calls")
+	serverCmd.PersistentFlags().StringVarP(&token, "token", "t", config.SetDefault().API.Token, "API token (implies --auth)")
+	tokenCmd.PersistentFlags().StringVarP(&tokenHashAlgo, "algorithm", "a", config.SetDefault().API.TokenHashAlgorithm, "specify the token hashing algorithm")
 
-	viper.BindPFlag("logging.debug", rootCmd.PersistentFlags().Lookup("debug"))
+	viper.BindPFlag("logging.debug", serverCmd.PersistentFlags().Lookup("debug"))
 	viper.BindPFlag("network.address", serverCmd.PersistentFlags().Lookup("address"))
 	viper.BindPFlag("network.port", serverCmd.PersistentFlags().Lookup("port"))
 	viper.BindPFlag("network.responseTimeout", serverCmd.PersistentFlags().Lookup("timeout"))
@@ -94,49 +95,54 @@ func init() {
 	rootCmd.AddCommand(serverCmd)
 	rootCmd.AddCommand(tokenCmd)
 	rootCmd.AddCommand(versionCmd)
-
 }
 
 func initConfig() {
+	var logger = logging.New()
+
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
 	} else {
 		configDir, err := os.UserConfigDir()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Unable to find user's config directory!")
-			os.Exit(1)
+			err = status.New(status.ErrConfigNotFound, "unable to find user's config directory", err)
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 
-		var configPath string
-		configPath = filepath.Join(configDir, app.Name)
+		var configPath = filepath.Join(configDir, app.Name)
 
 		viper.AddConfigPath(configPath)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName("config")
+		viper.SetConfigName("config.yaml")
 	}
 
 	viper.SetEnvPrefix(app.Name)
 	viper.AutomaticEnv()
-	// Needed so that the viper engine can map the right suboptions
-	// from the YAML configuration to the env
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	} else {
-		fmt.Printf("Unable to read config file: %s\nError: %s\n", viper.ConfigFileUsed(), err)
+	if err := viper.ReadInConfig(); err != nil {
+		err = status.New(status.ErrConfigInvalid, "unable to read config file", err)
+		fmt.Fprintf(os.Stderr, "Error %v\n", err)
 	}
 
-	if err := viper.Unmarshal(&config); err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to read values into configuration!")
+	if err := viper.Unmarshal(&conf); err != nil {
+		err = status.New(status.ErrLoadConfigValues, "unable to load values into configuration", err)
+		fmt.Fprintf(os.Stderr, "Error %v\n", err)
 		os.Exit(1)
 	}
 
-	if authMode && config.API.Token == "" {
-		fmt.Printf("API token missing for auth mode. Please ")
-		os.Exit(2)
-	} else if !authMode && config.API.Token != "" {
-		fmt.Printf("You have to enable authMode when using an API token")
-		os.Exit(2)
+	if conf.Logging.DebugMode {
+		logging.SetLogLevel("debug")
+	}
+	conf.Logging.Logger = logger
+
+	if authMode && conf.API.Token == "" {
+		err := status.New(status.ErrAPITokenMissing, "missing API token for auth mode", nil)
+		fmt.Fprintf(os.Stderr, "Error %v\n", err)
+		os.Exit(1)
+	} else if !authMode && conf.API.Token != "" {
+		err := status.New(status.ErrAPINotAuthMode, "not running in auth mode", nil)
+		fmt.Fprintf(os.Stderr, "Error %v\n", err)
+		os.Exit(1)
 	}
 }

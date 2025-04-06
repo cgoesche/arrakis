@@ -1,6 +1,6 @@
 module arrakis
 
-go 1.23.3
+go 1.24
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect

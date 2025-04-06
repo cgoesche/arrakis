@@ -17,30 +17,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
+	"arrakis/internal/status"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha3"
 	"crypto/sha512"
 	"fmt"
-	"github.com/spf13/cobra"
+	"os"
 	"regexp"
+
+	"github.com/spf13/cobra"
 )
 
 var tokenCmd = &cobra.Command{
 	Use:   "token",
-	Args:  cobra.MatchAll(cobra.RangeArgs(0, 3), cobra.OnlyValidArgs),
+	Args:  cobra.MatchAll(cobra.OnlyValidArgs),
 	Short: "Generate an API token",
 	Long: `When the --auth or -a flag is used at the command line
 API calls will require an API Token either.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := genToken(config.API.TokenHashAlgorithm); err != nil {
-			return fmt.Errorf("Error: %s", err)
-		}
-		return nil
+	Run: func(cmd *cobra.Command, args []string) {
+		genToken(conf.API.TokenHashAlgorithm)
 	},
 }
 
-func genToken(a string) error {
+func genToken(a string) {
 	var (
 		token string
 		err   error
@@ -57,18 +57,21 @@ func genToken(a string) error {
 		if sha3Pat.MatchString(a) {
 			token, err = genSHA3(s, a)
 		} else {
-			return fmt.Errorf("Unknown hash algorithm %s\n", a)
+			err = fmt.Errorf("unknown hash algorithm '%s'", a)
 		}
+	}
+
+	if err != nil {
+		err = status.New(status.ErrTokenGen, "token generation failed", err)
+		fmt.Fprintf(os.Stderr, "Error %v\n", err)
+		os.Exit(1)
 	}
 
 	fmt.Printf(`Using %s to generate an API Token
 Please store this in a safe location and do not share it with anyone
 
-API Token:
-%x
+Token: %x
 `, a, token)
-
-	return err
 }
 
 func genSHA256(s string) (string, error) {
@@ -100,7 +103,7 @@ func genSHA3(s string, a string) (string, error) {
 	case "sha3-512":
 		h = sha3.New512()
 	default:
-		return "", fmt.Errorf("Unknown hash SHA3 algorithm size!")
+		return "", fmt.Errorf("unknown hash SHA3 algorithm size")
 	}
 
 	h.Write([]byte(s))

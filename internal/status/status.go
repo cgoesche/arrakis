@@ -14,12 +14,46 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package main
+package status
 
 import (
-	"arrakis/cmd"
+	"fmt"
 )
 
-func main() {
-	cmd.Execute()
+type code int
+
+const (
+	ErrConfigNotFound = iota + 1
+	ErrConfigInvalid
+	ErrLoadConfigValues
+	ErrAPIStart
+	ErrAPITokenMissing
+	ErrAPINotAuthMode
+	ErrTLSFailed
+	ErrTokenGen
+)
+
+type Status struct {
+	Code code
+	Msg  string
+	Err  error
+}
+
+func New(c code, m string, e error) error {
+	return &Status{
+		Code: c,
+		Msg:  m,
+		Err:  e,
+	}
+}
+
+func (e *Status) Error() string {
+	if e.Err != nil {
+		return fmt.Sprintf("(code %d): %s - %s", e.Code, e.Msg, e.Err)
+	}
+	return fmt.Sprintf("(code %d): %s", e.Code, e.Msg)
+}
+
+func (e *Status) Unwrap() error {
+	return e.Err
 }
